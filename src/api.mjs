@@ -1,7 +1,7 @@
 import assign from './assign.mjs'
 import defaultConverter from './converter.mjs'
 
-function init(converter, defaultAttributes) {
+function init(converter, defaultAttributes, cookiesProvider) {
   function set(name, value, attributes) {
     if (typeof document === 'undefined') {
       return
@@ -42,8 +42,9 @@ function init(converter, defaultAttributes) {
       stringifiedAttributes += '=' + attributes[attributeName].split(';')[0]
     }
 
-    return (document.cookie =
-      name + '=' + converter.write(value, name) + stringifiedAttributes)
+    return cookiesProvider.set(
+      name + '=' + converter.write(value, name) + stringifiedAttributes
+    )
   }
 
   function get(name) {
@@ -53,7 +54,8 @@ function init(converter, defaultAttributes) {
 
     // To prevent the for loop in the first place assign an empty array
     // in case there are no cookies at all.
-    var cookies = document.cookie ? document.cookie.split('; ') : []
+    var docCookie = cookiesProvider.get()
+    var cookies = docCookie ? docCookie.split('; ') : []
     var jar = {}
     for (var i = 0; i < cookies.length; i++) {
       var parts = cookies[i].split('=')
@@ -87,17 +89,42 @@ function init(converter, defaultAttributes) {
         )
       },
       withAttributes: function (attributes) {
-        return init(this.converter, assign({}, this.attributes, attributes))
+        return init(
+          this.converter,
+          assign({}, this.attributes, attributes),
+          this.cookiesProvider
+        )
       },
       withConverter: function (converter) {
-        return init(assign({}, this.converter, converter), this.attributes)
+        return init(
+          assign({}, this.converter, converter),
+          this.attributes,
+          this.cookiesProvider
+        )
+      },
+      withCookiesProvider: function (cookiesProvider) {
+        return init(
+          this.converter,
+          this.attributes,
+          assign({}, this.cookiesProvider, cookiesProvider)
+        )
       }
     },
     {
       attributes: { value: Object.freeze(defaultAttributes) },
-      converter: { value: Object.freeze(converter) }
+      converter: { value: Object.freeze(converter) },
+      cookiesProvider: { value: Object.freeze(cookiesProvider) }
     }
   )
 }
 
-export default init(defaultConverter, { path: '/' })
+export default init(
+  defaultConverter,
+  { path: '/' },
+  {
+    get: () => document.cookie,
+    set: (newVal) => {
+      document.cookie = newVal
+    }
+  }
+)
