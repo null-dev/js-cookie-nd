@@ -123,8 +123,6 @@ export default init(
   { path: '/' },
   {
     get: () => document.cookie,
-    set: (newVal) => {
-      document.cookie = newVal
-    }
+    set: (newVal) => (document.cookie = newVal)
   }
 )
